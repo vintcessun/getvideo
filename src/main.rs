@@ -8,6 +8,7 @@ use anyhow::Result;
 use std::env::set_var;
 
 fn main(){
+    set_var("RUST_LOG","info");
     env_logger::init();
 
     loop{
@@ -17,7 +18,6 @@ fn main(){
         .item("投屏电视 通过数据库")
         .item("投屏电视 在线上获取")
         .item("更新urls")
-        .item("设置日志等级")
         .item("退出")
         .interact()
         .unwrap();
@@ -27,36 +27,14 @@ fn main(){
                 0=>cast(true),
                 1=>cast(false),
                 2=>sql::update(),
-                3=>set_logger_info(),
-                4=>{return;},
+                3=>{return;},
                 _=>Ok(()),
             }{
                 Ok(_)=>{break},
                 Err(_)=>{},
             }
         }
-
     }
-}
-
-fn set_logger_info()->Result<()>{
-    let selection = Select::with_theme(&ColorfulTheme::default())
-        .with_prompt("选择一个选项")
-        .default(0)
-        .item("info")
-        .item("warning")
-        .item("error")
-        .item("默认")
-        .interact()?;
-    match selection{
-        0=>{set_var("RUST_LOG","info");}
-        1=>{set_var("RUST_LOG","warn");}
-        2=>{set_var("RUST_LOG","error");}
-        3=>{set_var("RUST_LOG","");}
-        _=>{}
-    }
-
-    Ok(())
 }
 
 fn cast(by_db:bool)->Result<()>{
@@ -77,14 +55,25 @@ fn cast(by_db:bool)->Result<()>{
         info!("寻找设备");
         let renders_discovered = dlna::discover()?;
         if renders_discovered.len()==0{
-            error!("没找到设备，正在重试");
-            continue;
+            error!("没找到设备");
+            let selection = Select::with_theme(&ColorfulTheme::default())
+            .with_prompt("请选择一个")
+            .default(0)
+            .item("重试")
+            .item("退出")
+            .interact()?;
+            match selection{
+                0=>{continue;},
+                1=>{return Ok(());},
+                _=>{},
+            }
         }
 
         info!("找到设备 renders_discovered = {:?}",&renders_discovered);
         let mut outer: Vec<String> = Vec::with_capacity(7);
         
         outer.push("重试".to_string());
+        outer.push("返回".to_string());
         for render in &renders_discovered{
             let out = format!("{}",render);
             outer.push(out);
@@ -98,7 +87,8 @@ fn cast(by_db:bool)->Result<()>{
         
         match selection{
             0=>{}
-            r=>{break (renders_discovered,r-1);}
+            1=>{return Ok(());}
+            r=>{break (renders_discovered,r-2);}
         }
     };
 
