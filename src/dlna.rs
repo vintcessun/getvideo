@@ -1,9 +1,12 @@
-use crab_dlna::{
-    Render,
-    Error,
-};
-use log::{debug, info};
+use crab_dlna::{Render,Error};
 use xml::escape::escape_str_attribute;
+use std::{thread, time};
+use log::{error, info, warn};
+use anyhow::Result;
+
+fn sleep(t:u64){
+    thread::sleep(time::Duration::from_millis(t));
+}
 
 const PAYLOAD_PLAY: &str = r#"
     <InstanceID>0</InstanceID>
@@ -24,23 +27,32 @@ impl Media{
     }
 }
 
-pub fn play(render: Render, url:&str) -> Result<Render,Error>{
+pub fn play(render: Render, url:&str) -> Result<Render>{
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
         .unwrap()
         .block_on(async {
             let ret = loop{
+                warn!("开始投屏 url = {}",&url);
                 match _play(render.clone(), Media::new(url)).await{
-                    Err(_)=>{}
-                    Ok(ret)=>{break ret;}
+                    Err(_t)=>{
+                        error!("投屏错误 url = {}\n render = {:?}",&url,&render);
+                    }
+                    Ok(ret)=>{
+                        info!("投屏成功");
+                        info!("render已更新");
+                        info!("render = {:?}",&ret);
+                        break ret;
+                    }
                 }
             };
             Ok(ret)
         })
 }
 
-pub async fn _play(render: Render, streaming_server: Media) -> Result<Render,Error> {
+pub async fn _play(render: Render, streaming_server: Media) -> Result<Render> {
+    info!("投屏{}",&streaming_server.video_url);
     //let subtitle_uri = streaming_server.video_url.clone();
     let payload_subtitle = escape_str_attribute(
         format!(r###"
@@ -66,7 +78,7 @@ pub async fn _play(render: Render, streaming_server: Media) -> Result<Render,Err
             uri_sub = &streaming_server.video_url,
             type_sub = &streaming_server.video_type
         ).as_str()).to_string();
-    debug!("Subtitle payload: '{}'", payload_subtitle);
+    //println!("Subtitle payload");
 
     let payload_setavtransporturi = format!(
         r#"
@@ -77,12 +89,12 @@ pub async fn _play(render: Render, streaming_server: Media) -> Result<Render,Err
         streaming_server.video_url.clone(),
         payload_subtitle
     );
-    debug!("SetAVTransportURI payload: '{}'", payload_setavtransporturi);
+    //println!("SetAVTransportURI payload");
 
     //info!("Starting media streaming server...");
     //let streaming_server_handle = tokio::spawn(async move { streaming_server.run().await });
 
-    info!("Setting Video URI");
+    //println!("Setting Video URI");
     render
         .service
         .action(
@@ -93,7 +105,7 @@ pub async fn _play(render: Render, streaming_server: Media) -> Result<Render,Err
         .await
         .map_err(Error::DLNASetAVTransportURIError)?;
 
-    info!("Playing video");
+    //println!("Playing video");
     render
         .service
         .action(render.device.url(), "Play", PAYLOAD_PLAY)
@@ -104,6 +116,10 @@ pub async fn _play(render: Render, streaming_server: Media) -> Result<Render,Err
     //    .await
     //    .map_err(Error::DLNAStreamingError)?;
 
+    let stop = vec!["STOPPED","NO_MEDIA_PRESENT"];
+
+    sleep(2000);
+
     loop{
         let ret = render
         .service
@@ -112,7 +128,7 @@ pub async fn _play(render: Render, streaming_server: Media) -> Result<Render,Err
         .map_err(Error::DLNAPlayError)?;
         //println!("{:?}",&ret);
         if ret.contains_key("CurrentTransportState"){
-            if ret["CurrentTransportState"]=="STOPPED"{
+            if stop.contains(&ret["CurrentTransportState"].as_str()){
                 break;
             }
         }
@@ -124,13 +140,13 @@ pub async fn _play(render: Render, streaming_server: Media) -> Result<Render,Err
     Ok(render)
 }
 
-pub fn discover()->Result<Vec<Render>,Error>{
+pub fn discover()->Result<Vec<Render>>{
     tokio::runtime::Builder::new_multi_thread()
     .enable_all()
     .build()
     .unwrap()
     .block_on(async {
-        let renders_discovered: Vec<Render> = Render::discover(5).await?;
+        let renders_discovered: Vec<Render> = Render::discover(20).await?;
         Ok(renders_discovered)
     })
 }
