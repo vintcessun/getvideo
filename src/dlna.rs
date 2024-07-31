@@ -1,7 +1,7 @@
 use crab_dlna::{Render,Error};
 use xml::escape::escape_str_attribute;
 use std::{thread, time};
-use log::{error, info, warn};
+use log::{error, info, warn, debug};
 use anyhow::Result;
 
 fn sleep(t:u64){
@@ -118,7 +118,7 @@ pub async fn _play(render: Render, streaming_server: Media) -> Result<Render> {
 
     let stop = vec!["STOPPED","NO_MEDIA_PRESENT"];
 
-    sleep(2000);
+    sleep(20000);
 
     loop{
         let ret = render
@@ -128,6 +128,7 @@ pub async fn _play(render: Render, streaming_server: Media) -> Result<Render> {
         .map_err(Error::DLNAPlayError)?;
         //println!("{:?}",&ret);
         if ret.contains_key("CurrentTransportState"){
+            debug!("DLNA设备状态{}",ret["CurrentTransportState"]);
             if stop.contains(&ret["CurrentTransportState"].as_str()){
                 break;
             }
