@@ -116,11 +116,16 @@ pub async fn _play(render: Render, streaming_server: Media) -> Result<Render> {
     //    .await
     //    .map_err(Error::DLNAStreamingError)?;
 
+    Ok(render)
+}
+
+pub fn is_stopped(render:&Render)->Result<bool>{
     let stop = vec!["STOPPED","NO_MEDIA_PRESENT"];
-
-    sleep(20000);
-
-    loop{
+    tokio::runtime::Builder::new_multi_thread()
+    .enable_all()
+    .build()
+    .unwrap()
+    .block_on(async {
         let ret = render
         .service
         .action(render.device.url(),"GetTransportInfo",PAYLOAD_PLAY)
@@ -130,15 +135,11 @@ pub async fn _play(render: Render, streaming_server: Media) -> Result<Render> {
         if ret.contains_key("CurrentTransportState"){
             debug!("DLNA设备状态{}",ret["CurrentTransportState"]);
             if stop.contains(&ret["CurrentTransportState"].as_str()){
-                break;
+                return Ok(true);
             }
         }
-        else{
-            break;
-        }
-    };
-
-    Ok(render)
+        return Ok(false)
+    })
 }
 
 pub fn discover()->Result<Vec<Render>>{

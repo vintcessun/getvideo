@@ -5,6 +5,7 @@ use rand::Rng;
 use log::{error, info, warn};
 use serde::{Deserialize,Serialize};
 use anyhow::Result;
+use indicatif::ProgressBar;
 
 #[derive(Debug,Clone, Serialize, Deserialize)]
 pub struct VideoUrl{
@@ -126,11 +127,13 @@ pub fn resort (urls:Vec<VideoUrl>)->Vec<Video>{
 
 #[derive(Debug)]
 pub struct Videoplay{
-    name:String,
+    pub name:String,
     pub url:String
 }
 
 pub fn get_video_to_url(mut videos:Vec<VideoUrl>)->Result<Vec<VideoUrl>>{
+    let len = videos.len().try_into()?;
+    let pb = ProgressBar::new(len);
     for video in &mut videos{
         video.url = loop{
             match get_video_url(&video.url){
@@ -143,7 +146,9 @@ pub fn get_video_to_url(mut videos:Vec<VideoUrl>)->Result<Vec<VideoUrl>>{
                 },
             }
         };
+        pb.inc(1);
     }
+    pb.finish_with_message("源url获取完成");
     Ok(videos)
 }
 

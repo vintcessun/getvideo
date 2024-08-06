@@ -6,9 +6,11 @@ use dialoguer::theme::ColorfulTheme;
 use log::{error, info, warn};
 use anyhow::Result;
 use std::env::set_var;
+use std::thread;
+use std::sync::mpsc;
 
 fn main(){
-    set_var("RUST_LOG","info");
+    //set_var("RUST_LOG","info");
     env_logger::init();
 
     loop{
@@ -97,13 +99,61 @@ fn cast(by_db:bool)->Result<()>{
     let mut render = renders_discovered[selection].clone();
     info!("已选择设备 render = {:?}",render);
 
-    loop{
+    'outer:loop{
         warn!("正在随机挑选一部戏曲");
         let vl = get_video_list::get_random_url_list(&ret)?;
         info!("挑选到 vl = {:?}",&vl);
-        for video in &vl{
+        let mut i = 0;
+        let len = vl.len();
+        'inner:while i<len{
+            let video = &vl[i];
+            println!("正在播放 {} 的第 {} 集",video.name,i+1);
             warn!("将要投屏：{:?}",&video);
             render = dlna::play(render,video.url.as_str())?;
+            let (tx, rx) = mpsc::channel();
+            thread::spawn(move ||{
+                let selection = Select::with_theme(&ColorfulTheme::default())
+                .with_prompt("请选择一个")
+                .default(0)
+                .item("下一部")
+                .item("上一集")
+                .item("下一集")
+                .item("退出投屏")
+                .interact().unwrap();
+                tx.send(selection).unwrap();
+            });
+            while !dlna::is_stopped(&render)?{
+                match rx.try_recv(){
+                    Ok(selection)=>{
+                        match selection{
+                            0=>{
+                                continue 'outer;
+                            }
+                            1=>{
+                                if i!=0{
+                                    i-=1;
+                                    continue 'inner;
+                                }
+                                else{
+                                    continue 'inner;
+                                }
+                            }
+                            2=>{
+                                i+=1;
+                                continue 'inner;
+                            }
+                            3=>{
+                                break 'outer;
+                            }
+                            _=>{}
+                        }
+                    },
+                    Err(_)=>{/*error!("没有接收到");*/},
+                }
+            }
+            i+=1;
         }
     }
+
+    Ok(())
 }
