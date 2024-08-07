@@ -5,7 +5,7 @@ use rand::Rng;
 use log::{error, info, warn};
 use serde::{Deserialize,Serialize};
 use anyhow::Result;
-use indicatif::ProgressBar;
+use indicatif::{ProgressBar, ProgressStyle};
 
 #[derive(Debug,Clone, Serialize, Deserialize)]
 pub struct VideoUrl{
@@ -134,6 +134,8 @@ pub struct Videoplay{
 pub fn get_video_to_url(mut videos:Vec<VideoUrl>)->Result<Vec<VideoUrl>>{
     let len = videos.len().try_into()?;
     let pb = ProgressBar::new(len);
+    pb.set_style(ProgressStyle::default_bar()
+    .template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")?);
     for video in &mut videos{
         video.url = loop{
             match get_video_url(&video.url){
