@@ -1,12 +1,7 @@
 use crab_dlna::{Render,Error};
 use xml::escape::escape_str_attribute;
-use std::{thread, time};
 use log::{error, info, warn, debug};
 use anyhow::Result;
-
-fn sleep(t:u64){
-    thread::sleep(time::Duration::from_millis(t));
-}
 
 const PAYLOAD_PLAY: &str = r#"
     <InstanceID>0</InstanceID>

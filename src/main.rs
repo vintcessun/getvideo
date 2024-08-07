@@ -5,13 +5,13 @@ use dialoguer::Select;
 use dialoguer::theme::ColorfulTheme;
 use log::{error, info, warn};
 use anyhow::Result;
-use std::env::set_var;
 use std::thread;
 use std::sync::mpsc;
+//use std::env::set_var;
 
 fn main(){
     //set_var("RUST_LOG","info");
-    env_logger::init();
+    //env_logger::init();
 
     loop{
         let selection = Select::with_theme(&ColorfulTheme::default())
@@ -99,6 +99,9 @@ fn cast(by_db:bool)->Result<()>{
     let mut render = renders_discovered[selection].clone();
     info!("已选择设备 render = {:?}",render);
 
+    let mut control = thread::spawn(||{});
+    let mut tx;
+    let (_, mut rx) = mpsc::channel();
     'outer:loop{
         warn!("正在随机挑选一部戏曲");
         let vl = get_video_list::get_random_url_list(&ret)?;
@@ -110,18 +113,20 @@ fn cast(by_db:bool)->Result<()>{
             println!("正在播放 {} 的第 {} 集",video.name,i+1);
             warn!("将要投屏：{:?}",&video);
             render = dlna::play(render,video.url.as_str())?;
-            let (tx, rx) = mpsc::channel();
-            thread::spawn(move ||{
-                let selection = Select::with_theme(&ColorfulTheme::default())
-                .with_prompt("请选择一个")
-                .default(0)
-                .item("下一部")
-                .item("上一集")
-                .item("下一集")
-                .item("退出投屏")
-                .interact().unwrap();
-                tx.send(selection).unwrap();
-            });
+            if control.is_finished(){
+                (tx, rx) = mpsc::channel();
+                control = thread::spawn(move ||{
+                    let selection = Select::with_theme(&ColorfulTheme::default())
+                    .with_prompt("请选择一个")
+                    .default(0)
+                    .item("下一部")
+                    .item("上一集")
+                    .item("下一集")
+                    .item("退出投屏")
+                    .interact().unwrap();
+                    tx.send(selection).unwrap();
+                });
+            }
             while !dlna::is_stopped(&render)?{
                 match rx.try_recv(){
                     Ok(selection)=>{
