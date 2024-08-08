@@ -110,7 +110,7 @@ fn cast(by_db:bool)->Result<()>{
         let len = vl.len();
         'inner:while i<len{
             let video = &vl[i];
-            println!("正在播放 {} 的第 {} 集",video.name,i+1);
+            info!("正在播放 {} 的第 {} 集",video.name,i+1);
             warn!("将要投屏：{:?}",&video);
             render = dlna::play(render,video.url.as_str())?;
             if control.is_finished(){
