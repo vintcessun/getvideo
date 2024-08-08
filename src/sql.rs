@@ -41,7 +41,7 @@ pub fn update()->Result<()>{
     )?;
 
     info!("保存到videos_with_exact_url 值为{:?}",&value);
-    conn.execute("INSERT INTO videos_with_exact_url (value) VALUES (?1)",&[&value])?;
+    conn.execute("INSERT INTO videos_with_exact_url (value) VALUES (?1)",[&value])?;
 
     conn.execute(
         "CREATE TABLE date (
@@ -51,7 +51,7 @@ pub fn update()->Result<()>{
     )?;
 
     info!("保存到date 值为{:?}",&[&date]);
-    conn.execute("INSERT INTO date (value) VALUES (?1)",&[&date])?;
+    conn.execute("INSERT INTO date (value) VALUES (?1)",[&date])?;
 
     Ok(())
 }
@@ -72,7 +72,7 @@ fn database_error()->Result<Vec<VideoUrl>>{
     error!("数据库获取失败，请更新");
     update()?;
     warn!("数据库获取失败，已更新");
-    return Err(anyhow!("数据库获取失败，已更新"))
+    Err(anyhow!("数据库获取失败，已更新"))
 }
 
 pub fn get()->Result<Vec<VideoUrl>>{
@@ -101,7 +101,7 @@ pub fn get()->Result<Vec<VideoUrl>>{
         info!("获取到 db_date = {:?}",&db_date);
     }
 
-    if !(db_date == date){
+    if db_date != date{
         info!("日期不对应 现在日期为 date = {:?}",&date);
         info!("重新获取");
         update()?;

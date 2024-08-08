@@ -25,15 +25,15 @@ fn main(){
         .unwrap();
 
         loop{
-            match match selection{
+            let ret = match selection{
                 0=>cast(true),
                 1=>cast(false),
                 2=>sql::update(),
                 3=>{return;},
                 _=>Ok(()),
-            }{
-                Ok(_)=>{break},
-                Err(_)=>{},
+            };
+            if ret.is_ok(){
+                break;
             }
         }
     }
@@ -56,7 +56,7 @@ fn cast(by_db:bool)->Result<()>{
     let (renders_discovered,selection)=loop{
         info!("寻找设备");
         let renders_discovered = dlna::discover()?;
-        if renders_discovered.len()==0{
+        if renders_discovered.is_empty(){
             error!("没找到设备");
             let selection = Select::with_theme(&ColorfulTheme::default())
             .with_prompt("请选择一个")

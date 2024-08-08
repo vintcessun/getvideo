@@ -15,10 +15,9 @@ pub struct Media{
 }
 impl Media{
     pub fn new(url:&str)->Self{
-        let t = url.split(".").collect::<Vec<_>>();
+        let t = url.split('.').collect::<Vec<_>>();
         let video_type = t[t.len()-1];
-        let ret = Media{video_url:url.to_string(),video_type:video_type.to_string()};
-        ret
+        Self{video_url:url.to_string(),video_type:video_type.to_string()}
     }
 }
 
@@ -115,7 +114,7 @@ pub async fn _play(render: Render, streaming_server: Media) -> Result<Render> {
 }
 
 pub fn is_stopped(render:&Render)->Result<bool>{
-    let stop = vec!["STOPPED","NO_MEDIA_PRESENT"];
+    let stop = ["STOPPED","NO_MEDIA_PRESENT"];
     tokio::runtime::Builder::new_multi_thread()
     .enable_all()
     .build()
@@ -133,7 +132,7 @@ pub fn is_stopped(render:&Render)->Result<bool>{
                 return Ok(true);
             }
         }
-        return Ok(false)
+        Ok(false)
     })
 }
 
