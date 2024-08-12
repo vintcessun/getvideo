@@ -7,11 +7,11 @@ use log::{error, info, warn};
 use anyhow::Result;
 use std::thread;
 use std::sync::mpsc;
-//use std::env::set_var;
+use std::env::set_var;
 
 fn main(){
-    //set_var("RUST_LOG","info");
-    //env_logger::init();
+    set_var("RUST_LOG","error");
+    env_logger::init();
 
     loop{
         let selection = Select::with_theme(&ColorfulTheme::default())
@@ -24,18 +24,13 @@ fn main(){
         .interact()
         .unwrap();
 
-        loop{
-            let ret = match selection{
-                0=>cast(true),
-                1=>cast(false),
-                2=>sql::update(),
-                3=>{return;},
-                _=>Ok(()),
-            };
-            if ret.is_ok(){
-                break;
-            }
-        }
+        match selection{
+            0=>{cast(true)},
+            1=>{cast(false)},
+            2=>{sql::update()},
+            3=>{break;},
+            _=>{break;},
+        }.unwrap();
     }
 }
 
@@ -59,7 +54,7 @@ fn cast(by_db:bool)->Result<()>{
         if renders_discovered.is_empty(){
             error!("没找到设备");
             let selection = Select::with_theme(&ColorfulTheme::default())
-            .with_prompt("请选择一个")
+            .with_prompt("选择一台设备")
             .default(0)
             .item("重试")
             .item("退出")
@@ -100,11 +95,15 @@ fn cast(by_db:bool)->Result<()>{
     info!("已选择设备 render = {:?}",render);
 
     let mut control = thread::spawn(||{});
-    let mut tx;
-    let (_, mut rx) = mpsc::channel();
+    let (mut _tx, mut rx) = mpsc::channel();
     'outer:loop{
         warn!("正在随机挑选一部戏曲");
-        let vl = get_video_list::get_random_url_list(&ret)?;
+        let vl = loop{
+            match get_video_list::get_random_url_list(&ret){
+                Ok(ret)=>{break ret;}
+                Err(_)=>{error!("挑选失败，正在重新挑选");}
+            }
+        };
         info!("挑选到 vl = {:?}",&vl);
         let mut i = 0;
         let len = vl.len();
@@ -112,9 +111,9 @@ fn cast(by_db:bool)->Result<()>{
             let video = &vl[i];
             info!("正在播放 {} 的第 {} 集",video.name,i+1);
             warn!("将要投屏：{:?}",&video);
-            render = dlna::play(render,video.url.as_str())?;
+            render = dlna::play(render,video.url.as_str());
             if control.is_finished(){
-                (tx, rx) = mpsc::channel();
+                (_tx, rx) = mpsc::channel();
                 control = thread::spawn(move ||{
                     let selection = Select::with_theme(&ColorfulTheme::default())
                     .with_prompt("请选择一个")
@@ -124,10 +123,10 @@ fn cast(by_db:bool)->Result<()>{
                     .item("下一集")
                     .item("退出投屏")
                     .interact().unwrap();
-                    tx.send(selection).unwrap();
+                    _tx.send(selection).unwrap();
                 });
             }
-            while !dlna::is_stopped(&render)?{
+            while !dlna::is_stopped(&render){
                 match rx.try_recv(){
                     Ok(selection)=>{
                         match selection{

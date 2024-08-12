@@ -1,8 +1,7 @@
 use log::{error, info, warn};
 use chrono::{Local, Datelike};
 use rusqlite::Connection;
-use crate::get_video_list;
-use crate::get_video_list::VideoUrl;
+use crate::VideoUrl;
 use std::path::Path;
 use std::fs::remove_file;
 use anyhow::Result;

@@ -21,16 +21,16 @@ impl Media{
     }
 }
 
-pub fn play(render: Render, url:&str) -> Result<Render>{
-    tokio::runtime::Builder::new_multi_thread()
+pub fn play(render: Render, url:&str) -> Render{
+    let ret = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
         .unwrap()
         .block_on(async {
-            let ret = loop{
+            loop{
                 warn!("开始投屏 url = {}",&url);
                 match _play(render.clone(), Media::new(url)).await{
-                    Err(_t)=>{
+                    Err(_)=>{
                         error!("投屏错误 url = {}\n render = {:?}",&url,&render);
                     }
                     Ok(ret)=>{
@@ -40,9 +40,9 @@ pub fn play(render: Render, url:&str) -> Result<Render>{
                         break ret;
                     }
                 }
-            };
-            Ok(ret)
-        })
+            }
+        });
+    ret
 }
 
 pub async fn _play(render: Render, streaming_server: Media) -> Result<Render> {
@@ -113,27 +113,37 @@ pub async fn _play(render: Render, streaming_server: Media) -> Result<Render> {
     Ok(render)
 }
 
-pub fn is_stopped(render:&Render)->Result<bool>{
+pub fn is_stopped(render:&Render)->bool{
     let stop = ["STOPPED","NO_MEDIA_PRESENT"];
-    tokio::runtime::Builder::new_multi_thread()
+    let ret = tokio::runtime::Builder::new_multi_thread()
     .enable_all()
     .build()
     .unwrap()
     .block_on(async {
-        let ret = render
-        .service
-        .action(render.device.url(),"GetTransportInfo",PAYLOAD_PLAY)
-        .await
-        .map_err(Error::DLNAPlayError)?;
-        //println!("{:?}",&ret);
-        if ret.contains_key("CurrentTransportState"){
-            debug!("DLNA设备状态{}",ret["CurrentTransportState"]);
-            if stop.contains(&ret["CurrentTransportState"].as_str()){
-                return Ok(true);
+        loop{
+            match render
+            .service
+            .action(render.device.url(),"GetTransportInfo",PAYLOAD_PLAY)
+            .await
+            .map_err(Error::DLNAPlayError){
+                Ok(ret)=>{break ret;},
+                Err(_)=>{error!("状态查询失败正在重试")},
             }
         }
-        Ok(false)
-    })
+        //println!("{:?}",&ret);
+    });
+    debug!("获取到 ret = {:?}",&ret);
+    if ret.is_empty(){
+        return true;
+    }
+    else if ret.contains_key("CurrentTransportState"){
+        let state = ret["CurrentTransportState"].clone();
+        debug!("DLNA设备状态{}",&state);
+        if stop.contains(&state.as_str()){
+            return true;
+        }
+    }
+    false
 }
 
 pub fn discover()->Result<Vec<Render>>{
