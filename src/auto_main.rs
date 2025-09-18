@@ -10,94 +10,33 @@ use std::thread;
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::Builder::new()
-        .filter_level(log::LevelFilter::Debug)
+        .filter_level(log::LevelFilter::Info)
         .init();
-
-    loop {
-        let selection = Select::with_theme(&ColorfulTheme::default())
-            .with_prompt("选择一个选项")
-            .default(0)
-            .item("投屏电视")
-            .item("更新urls")
-            .item("退出")
-            .interact()
-            .unwrap();
-
-        match selection {
-            0 => cast().await?,
-            1 => {
-                data_store::update().await?;
-            }
-            2 => {
-                break;
-            }
-            _ => {
-                break;
-            }
-        };
-    }
+    auto_cast().await?;
     Ok(())
 }
 
-async fn cast() -> Result<()> {
-    warn!("获取视频列表");
-
+async fn auto_cast() -> Result<()> {
     let urls = data_store::get().await?;
 
     info!("对视频列表进行分类");
     let ret = xmtv_api::sort_by_title(urls);
     info!("ret = {:?}", &ret);
 
-    let (renders_discovered, selection) = loop {
-        info!("寻找设备");
+    let mut render = 'outer: loop {
         let renders_discovered = dlna::discover().await?;
         if renders_discovered.is_empty() {
-            error!("没找到设备");
-            let selection = Select::with_theme(&ColorfulTheme::default())
-                .with_prompt("选择一台设备")
-                .default(0)
-                .item("重试")
-                .item("退出")
-                .interact()?;
-            match selection {
-                0 => {
-                    continue;
-                }
-                1 => {
-                    return Ok(());
-                }
-                _ => {}
-            }
+            continue;
         }
 
-        info!("找到设备 renders_discovered = {:?}", &renders_discovered);
-        let mut outer: Vec<String> = Vec::with_capacity(7);
-
-        outer.push("重试".to_string());
-        outer.push("返回".to_string());
         for render in &renders_discovered {
             let out = format!("{render}");
-            outer.push(out);
-        }
-
-        let selection = Select::with_theme(&ColorfulTheme::default())
-            .with_prompt("选择一台设备")
-            .default(0)
-            .items(&outer)
-            .interact()?;
-
-        match selection {
-            0 => {}
-            1 => {
-                return Ok(());
-            }
-            r => {
-                break (renders_discovered, r - 2);
+            if out.contains("FastCast") {
+                break 'outer render.to_owned();
             }
         }
     };
 
-    let mut render = renders_discovered[selection].clone();
     info!("已选择设备 render = {render:?}");
 
     let mut control = thread::spawn(|| {});

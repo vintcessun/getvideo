@@ -1,7 +1,8 @@
 [package]
 name = "getvideo"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
+default-run = "client"
 
 [dependencies]
 serde = { version = "1.0.204", features = ["derive"] }
@@ -12,7 +13,7 @@ log = "0.4.22"
 crab-dlna = "0.2.1"
 xml = "0.8.20"
 url = "2.5.2"
-reqwest = { version = "0.11", features = ["blocking"] }
+reqwest = { version = "0.11", features = ["json", "stream"] }
 rand = "0.8.5"
 tokio = { version = "1", features = ["full"] }
 chrono = "0.4.38"
@@ -20,3 +21,12 @@ env_logger = "0.11.5"
 libsqlite3-sys = "0.30.1"
 anyhow = "1.0.86"
 indicatif = "0.17.8"
+xmtv_api = "0.2.2"
+
+[[bin]]
+name = "client"
+path = "src/main.rs"
+
+[[bin]]
+name = "auto"
+path = "src/auto_main.rs"
