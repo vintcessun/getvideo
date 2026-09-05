@@ -113,6 +113,7 @@ pub async fn get() -> Result<Vec<VideoUrl>> {
 
     if !file_path.exists() {
         info!("数据文件不存在，开始首次更新");
+        // 一份缓存都没有，这时候更新失败就真的没辙了，只能往上抛
         update().await?;
     }
 
@@ -120,8 +121,23 @@ pub async fn get() -> Result<Vec<VideoUrl>> {
 
     if should_update(&stored_data.last_update) {
         info!("距离上次更新已超过一天，开始增量更新");
-        update().await?;
-        return load_data().await.map(|data| data.videos);
+        match update().await {
+            Ok(()) => return load_data().await.map(|data| data.videos),
+            Err(e) => {
+                // 更新失败不能把整个程序带走。手里还有一份能用的缓存，
+                // 能投屏比「数据是不是最新的」重要得多。
+                //
+                // 现实里就踩到了：xmtv_api 0.2.2 解析播出日期时，
+                // 碰到节目名里没有「斗阵来看戏」的条目会 parse 失败，
+                // 于是整个程序一启动就退出，连设备都扫不到。
+                warn!(
+                    "更新失败，继续用 {} 的缓存数据（共 {} 个视频）: {e}",
+                    stored_data.last_update,
+                    stored_data.videos.len()
+                );
+                return Ok(stored_data.videos);
+            }
+        }
     }
 
     info!("使用缓存数据，最后更新: {}", stored_data.last_update);

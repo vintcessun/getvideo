@@ -1,5 +1,4 @@
-mod data_store;
-mod dlna;
+use getvideo::{data_store, dlna};
 use anyhow::Result;
 use dialoguer::Select;
 use dialoguer::theme::ColorfulTheme;
@@ -46,7 +45,7 @@ async fn cast() -> Result<()> {
 
     info!("对视频列表进行分类");
     let ret = xmtv_api::sort_by_title(urls);
-    info!("ret = {:?}", &ret);
+    info!("ret = {:?}", ret);
 
     let (renders_discovered, selection) = loop {
         info!("寻找设备");
@@ -70,7 +69,7 @@ async fn cast() -> Result<()> {
             }
         }
 
-        info!("找到设备 renders_discovered = {:?}", &renders_discovered);
+        info!("找到设备 renders_discovered = {:?}", renders_discovered);
         let mut outer: Vec<String> = Vec::with_capacity(7);
 
         outer.push("重试".to_string());
@@ -114,13 +113,13 @@ async fn cast() -> Result<()> {
                 }
             }
         };
-        info!("挑选到 vl = {:?}", &vl);
+        info!("挑选到 vl = {:?}", vl);
         let mut i = 0;
         let len = vl.len();
         'inner: while i < len {
             let video = &vl[i];
             info!("正在播放 {} 的第 {} 集", video.name, i + 1);
-            warn!("将要投屏：{:?}", &video);
+            warn!("将要投屏：{:?}", video);
             render = dlna::play(render, video.url.as_str()).await;
             if control.is_finished() {
                 (_tx, rx) = mpsc::channel();
@@ -162,6 +161,8 @@ async fn cast() -> Result<()> {
                     },
                     Err(_) => { /*error!("没有接收到");*/ }
                 }
+                // 歇一下再查下一次，别把设备问死
+                tokio::time::sleep(dlna::POLL_INTERVAL).await;
             }
             i += 1;
         }

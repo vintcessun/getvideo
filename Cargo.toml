@@ -8,20 +8,25 @@ default-run = "client"
 serde = { version = "1.0.204", features = ["derive"] }
 serde_json = "1.0.120"
 dialoguer = "0.11.0"
-rusqlite = "0.32.0"
 log = "0.4.22"
-crab-dlna = "0.2.1"
 xml = "0.8.20"
-url = "2.5.2"
-reqwest = { version = "0.11", features = ["json", "stream"] }
-rand = "0.8.5"
 tokio = { version = "1", features = ["full"] }
 chrono = "0.4.38"
 env_logger = "0.11.5"
-libsqlite3-sys = "0.30.1"
 anyhow = "1.0.86"
-indicatif = "0.17.8"
 xmtv_api = "0.2.2"
+rupnp = "2.0"
+socket2 = "0.5"
+if-addrs = "0.15"
+futures = "0.3"
+
+[lib]
+name = "getvideo"
+path = "src/lib.rs"
+
+[[example]]
+name = "mock_renderer"
+path = "examples/mock_renderer.rs"
 
 [[bin]]
 name = "client"
@@ -30,3 +35,7 @@ path = "src/main.rs"
 [[bin]]
 name = "auto"
 path = "src/auto_main.rs"
+
+[[example]]
+name = "scan"
+path = "examples/scan.rs"
