@@ -24,8 +24,14 @@ async fn 从设备地址一路投屏到播放结束() {
             .expect("应该识别出这是一台可投屏的设备");
         assert_eq!(render.device.friendly_name(), mock::FRIENDLY_NAME);
         let shown = format!("{render}");
-        assert!(shown.contains("AVTransport"), "展示给用户的名字里应该有服务类型: {shown}");
-        assert!(shown.contains(mock::FRIENDLY_NAME), "展示的名字不对: {shown}");
+        assert!(
+            shown.contains("AVTransport"),
+            "展示给用户的名字里应该有服务类型: {shown}"
+        );
+        assert!(
+            shown.contains(mock::FRIENDLY_NAME),
+            "展示的名字不对: {shown}"
+        );
 
         // ② 投屏
         let url = "http://192.168.1.9:8000/xiqu/ep1.mp4";

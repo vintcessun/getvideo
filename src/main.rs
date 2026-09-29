@@ -1,7 +1,7 @@
-use getvideo::{data_store, dlna};
 use anyhow::Result;
 use dialoguer::Select;
 use dialoguer::theme::ColorfulTheme;
+use getvideo::{data_store, dlna};
 use log::{error, info, warn};
 use std::sync::mpsc;
 use std::thread;

@@ -331,7 +331,10 @@ async fn recv_endpoints(socket: &UdpSocket, deadline: Instant, who: &str) -> Has
         match parse_endpoint(&text) {
             Some(endpoint) => {
                 if found.insert(endpoint.clone()) {
-                    debug!("{who} 从 {from} 发现: {} ({})", endpoint.location, endpoint.key);
+                    debug!(
+                        "{who} 从 {from} 发现: {} ({})",
+                        endpoint.location, endpoint.key
+                    );
                 }
             }
             None => debug!("{who} 忽略来自 {from} 的报文"),
@@ -351,22 +354,25 @@ pub async fn fetch_render(location: &str) -> Option<Render> {
         }
     };
 
-    let device = match tokio::time::timeout(DEVICE_FETCH_TIMEOUT, rupnp::Device::from_url(uri)).await
-    {
-        Err(_) => {
-            debug!("获取设备描述超时（{DEVICE_FETCH_TIMEOUT:?}）: {location}");
-            return None;
-        }
-        Ok(Err(e)) => {
-            debug!("获取设备描述失败 {location}: {e}");
-            return None;
-        }
-        Ok(Ok(device)) => device,
-    };
+    let device =
+        match tokio::time::timeout(DEVICE_FETCH_TIMEOUT, rupnp::Device::from_url(uri)).await {
+            Err(_) => {
+                debug!("获取设备描述超时（{DEVICE_FETCH_TIMEOUT:?}）: {location}");
+                return None;
+            }
+            Ok(Err(e)) => {
+                debug!("获取设备描述失败 {location}: {e}");
+                return None;
+            }
+            Ok(Ok(device)) => device,
+        };
 
     // 不要求版本号必须是 1：有的渲染器只提供 AVTransport:2 / :3，
     // crab-dlna 硬匹配 `AVTransport:1` 会把它们全部漏掉。
-    let service = match device.services_iter().find(|s| is_av_transport(s.service_type())) {
+    let service = match device
+        .services_iter()
+        .find(|s| is_av_transport(s.service_type()))
+    {
         Some(service) => service.clone(),
         None => {
             debug!(
@@ -426,8 +432,11 @@ pub async fn discover(timeout_secs: u64) -> Vec<Render> {
     );
 
     // 所有网卡 + NOTIFY 监听全部并发，总耗时就是 timeout，不会叠加
-    let searches =
-        futures::future::join_all(interfaces.iter().map(|ip| search_on_interface(*ip, timeout)));
+    let searches = futures::future::join_all(
+        interfaces
+            .iter()
+            .map(|ip| search_on_interface(*ip, timeout)),
+    );
     let (per_interface, notified) = tokio::join!(searches, listen_notify(&interfaces, timeout));
 
     let mut endpoints: HashSet<Endpoint> = notified;
@@ -459,7 +468,10 @@ pub async fn discover(timeout_secs: u64) -> Vec<Render> {
     // 并发抓取并各自超时：一台没响应的设备不会再拖住整轮扫描。
     // 同一台设备的多个地址全都试一遍，其中一个不通还有别的兜底。
     let fetched = futures::future::join_all(endpoints.iter().map(|endpoint| async move {
-        (endpoint.key.as_str(), fetch_render(&endpoint.location).await)
+        (
+            endpoint.key.as_str(),
+            fetch_render(&endpoint.location).await,
+        )
     }))
     .await;
 
@@ -526,7 +538,8 @@ mod tests {
 
     #[test]
     fn 没有_usn_时退回用地址当标识() {
-        let msg = "HTTP/1.1 200 OK\r\nLOCATION: http://192.168.1.40:80/d.xml\r\nST: ssdp:all\r\n\r\n";
+        let msg =
+            "HTTP/1.1 200 OK\r\nLOCATION: http://192.168.1.40:80/d.xml\r\nST: ssdp:all\r\n\r\n";
         let endpoint = parse_endpoint(msg).unwrap();
         assert_eq!(endpoint.key, endpoint.location);
     }
@@ -612,8 +625,16 @@ mod tests {
     #[test]
     fn 识别任意版本的_avtransport() {
         // 只认 AVTransport:1 正是原来会漏掉设备的原因
-        assert!(is_av_transport(&URN::service("schemas-upnp-org", "AVTransport", 1)));
-        assert!(is_av_transport(&URN::service("schemas-upnp-org", "AVTransport", 3)));
+        assert!(is_av_transport(&URN::service(
+            "schemas-upnp-org",
+            "AVTransport",
+            1
+        )));
+        assert!(is_av_transport(&URN::service(
+            "schemas-upnp-org",
+            "AVTransport",
+            3
+        )));
         assert!(!is_av_transport(&URN::service(
             "schemas-upnp-org",
             "RenderingControl",

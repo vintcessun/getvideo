@@ -230,7 +230,9 @@ async fn respond_to_searches(socket: Arc<UdpSocket>, port: u16) {
         if !text.to_ascii_uppercase().starts_with("M-SEARCH") {
             continue;
         }
-        let Some(st) = header(&text, "ST") else { continue };
+        let Some(st) = header(&text, "ST") else {
+            continue;
+        };
         if !we_answer_to(st) {
             continue;
         }
@@ -301,7 +303,11 @@ async fn serve_http(mut stream: TcpStream, state: Arc<State>, port: u16) -> std:
     let path = parts.next().unwrap_or_default().to_string();
 
     let (status, content_type, body) = match (method.as_str(), path.as_str()) {
-        ("GET", DESC_PATH) => ("200 OK", "text/xml; charset=\"utf-8\"", description_xml(port)),
+        ("GET", DESC_PATH) => (
+            "200 OK",
+            "text/xml; charset=\"utf-8\"",
+            description_xml(port),
+        ),
         ("GET", SCPD_PATH) => ("200 OK", "text/xml; charset=\"utf-8\"", scpd_xml()),
         ("POST", CONTROL_PATH) => {
             let action = header(&head, "SOAPAction")
@@ -387,7 +393,10 @@ fn handle_action(action: &str, body: &str, state: &State) -> Option<String> {
             state
                 .playing_polls_left
                 .store(state.polls_per_video, Ordering::SeqCst);
-            println!("[mock] Play（第 {} 次）", state.play_count.load(Ordering::SeqCst));
+            println!(
+                "[mock] Play（第 {} 次）",
+                state.play_count.load(Ordering::SeqCst)
+            );
             Some(action_response(action, &[]))
         }
         "Stop" => {
@@ -586,7 +595,9 @@ mod tests {
     fn 只回应自己认得的搜索目标() {
         assert!(we_answer_to("ssdp:all"));
         assert!(we_answer_to(AV_TRANSPORT));
-        assert!(!we_answer_to("urn:schemas-upnp-org:service:ContentDirectory:1"));
+        assert!(!we_answer_to(
+            "urn:schemas-upnp-org:service:ContentDirectory:1"
+        ));
     }
 
     #[test]

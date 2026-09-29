@@ -1,7 +1,7 @@
-use getvideo::{data_store, dlna};
 use anyhow::Result;
 use dialoguer::Select;
 use dialoguer::theme::ColorfulTheme;
+use getvideo::{data_store, dlna};
 use log::{error, info, warn};
 use std::sync::mpsc;
 use std::thread;
@@ -86,7 +86,9 @@ async fn wait_for_device() -> dlna::Render {
                 for render in &found {
                     warn!("  - {render}");
                 }
-                warn!("可以设环境变量 DLNA_DEVICE_NAME 改成上面某台的名字，{RETRY_INTERVAL:?} 后重试");
+                warn!(
+                    "可以设环境变量 DLNA_DEVICE_NAME 改成上面某台的名字，{RETRY_INTERVAL:?} 后重试"
+                );
             }
         }
 
