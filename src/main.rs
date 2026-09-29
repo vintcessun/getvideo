@@ -103,14 +103,14 @@ async fn cast() -> Result<()> {
     let (mut _tx, mut rx) = mpsc::channel();
     'outer: loop {
         warn!("正在随机挑选一部戏曲");
-        let vl = loop {
-            match xmtv_api::get_random_url_list(&ret) {
-                Ok(ret) => {
-                    break ret;
-                }
-                Err(_) => {
-                    error!("挑选失败，正在重新挑选");
-                }
+        // 这里**不能重试**：`ret` 在这个循环里不会变，挑不出来就是列表本身空的，
+        // 再挑一百次也是同样的结果。老代码写的是 `loop { Err => error!() }`，
+        // 空列表时会以最快速度刷屏空转，既看不出原因也停不下来。
+        let vl = match xmtv_api::get_random_url_list(&ret) {
+            Ok(vl) => vl,
+            Err(e) => {
+                error!("挑不出可播放的剧目（节目列表是空的？）：{e}");
+                break 'outer;
             }
         };
         info!("挑选到 vl = {:?}", vl);

@@ -49,7 +49,16 @@ pub async fn get_exact(others: Option<Vec<VideoUrl>>) -> Result<Vec<VideoUrl>> {
         'outer: for video_url in &video_urls {
             for existing_video in &existing_videos {
                 if existing_video == video_url {
-                    ret.push(existing_video.clone());
+                    // 保留本地那条，是为了不丢掉已经解析好的 mp4 直链
+                    //（`VideoUrl` 的 `==` 只比 title/name/time，不比 url）。
+                    //
+                    // 但 id 必须换成新抓的：老的 data.txt 是在 xmtv_api 加 id
+                    // 字段之前存的，读出来是 0。原样沿用本地那条的话，
+                    // 这两千多条的 id 永远填不上，xmtv_api 里按 id 去重
+                    // 那一步也就永远不生效。
+                    let mut merged = existing_video.clone();
+                    merged.id = video_url.id;
+                    ret.push(merged);
                     continue 'outer;
                 }
             }

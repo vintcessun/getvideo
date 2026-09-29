@@ -14,7 +14,7 @@ tokio = { version = "1", features = ["full"] }
 chrono = "0.4.38"
 env_logger = "0.11.5"
 anyhow = "1.0.86"
-xmtv_api = "0.2.2"
+xmtv_api = "0.2.4"
 rupnp = "2.0"
 socket2 = "0.5"
 if-addrs = "0.15"
